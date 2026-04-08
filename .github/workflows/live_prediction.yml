@@ -1,0 +1,61 @@
+name: Live Prediction (Free Data)
+
+on:
+  schedule:
+    # Weekdays at 22:10 UTC (adjust as needed for your market-close workflow)
+    - cron: "10 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: "Ticker symbol"
+        required: false
+        default: "AAPL"
+      retrain_on_live_data:
+        description: "Retrain checkpoint before inference"
+        required: false
+        default: "true"
+
+jobs:
+  live-predict:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/src
+      TICKER: ${{ github.event.inputs.ticker || 'AAPL' }}
+      RETRAIN_ON_LIVE_DATA: ${{ github.event.inputs.retrain_on_live_data || 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run live prediction job
+        run: |
+          EXTRA_ARGS=""
+          if [ "${RETRAIN_ON_LIVE_DATA}" = "true" ]; then
+            EXTRA_ARGS="--retrain-on-live-data --train-epochs 5"
+          fi
+
+          python scripts/live_predict_job.py \
+            --ticker "${TICKER}" \
+            --archive-run \
+            --save-fused \
+            ${EXTRA_ARGS}
+
+      - name: Upload live outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-prediction-${{ github.run_id }}
+          path: |
+            outputs/live/
+            data/raw/prices/live_*_prices.csv
+            data/raw/news/live_*_news.csv
+            data/raw/causal/live_*_causal.csv

@@ -31,4 +31,9 @@ data/interim/*
 data/processed/*
 !data/processed/.gitkeep
 
+# Live job generated raw snapshots
+data/raw/prices/live_*_prices.csv
+data/raw/news/live_*_news.csv
+data/raw/causal/live_*_causal.csv
+
 .pytest_cache/

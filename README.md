@@ -236,3 +236,31 @@ PYTHONPATH=src python scripts/walk_forward_backtest.py \
 This writes:
 - per-step predictions/returns CSV
 - summary JSON metrics (accuracy, precision/recall/f1, strategy vs buy-and-hold cumulative return)
+
+### Free Live Data Job
+
+Fetch free live-style data and make one prediction:
+
+```bash
+PYTHONPATH=src python scripts/live_predict_job.py \
+  --ticker AAPL \
+  --archive-run \
+  --save-fused
+```
+
+Force retraining on newly fetched live data before inference:
+
+```bash
+PYTHONPATH=src python scripts/live_predict_job.py \
+  --ticker AAPL \
+  --retrain-on-live-data \
+  --train-epochs 5 \
+  --archive-run \
+  --save-fused
+```
+
+An automated weekday workflow is included at:
+- `.github/workflows/live_prediction.yml`
+
+For full end-to-end architecture and signal flow details, see:
+- `docs/pipeline_flow.md`
