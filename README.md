@@ -195,3 +195,44 @@ Recreate the recommended Conda environment:
 conda env create -f environment.yml
 conda activate DS340
 ```
+
+## Live-Style Inference and Walk-Forward Backtest
+
+Two new scripts are available for deployment-style testing and realistic historical simulation:
+
+### 1) `scripts/run_inference.py`
+
+Single next-day prediction using the latest window.
+
+Use existing fused dataset:
+
+```bash
+PYTHONPATH=src python scripts/run_inference.py --ticker AAPL
+```
+
+Recompute from raw files (recommended for live-style runs):
+
+```bash
+PYTHONPATH=src python scripts/run_inference.py \
+  --use-raw-data \
+  --ticker AAPL \
+  --prices-csv data/raw/prices/your_prices.csv \
+  --news-csv data/raw/news/your_news.csv \
+  --causal-csv data/raw/causal/your_causal.csv
+```
+
+### 2) `scripts/walk_forward_backtest.py`
+
+Rolling/expanding evaluation with periodic retraining.
+
+```bash
+PYTHONPATH=src python scripts/walk_forward_backtest.py \
+  --use-raw-data \
+  --ticker AAPL \
+  --min-train-samples 60 \
+  --retrain-frequency 5
+```
+
+This writes:
+- per-step predictions/returns CSV
+- summary JSON metrics (accuracy, precision/recall/f1, strategy vs buy-and-hold cumulative return)
