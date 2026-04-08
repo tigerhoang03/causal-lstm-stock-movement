@@ -1,0 +1,233 @@
+date,ticker,headline,sentiment_score
+2024-01-01,AAPL,Macro news influences large-cap tech sentiment,0.265
+2024-01-01,AAPL,Management commentary on demand trends,-0.367
+2024-01-02,AAPL,Analyst note discusses margin outlook,-0.019
+2024-01-03,AAPL,Supply chain update raises mixed expectations,0.427
+2024-01-03,AAPL,Supply chain update raises mixed expectations,-0.106
+2024-01-04,AAPL,Management commentary on demand trends,-0.226
+2024-01-04,AAPL,Product launch rumors circulate online,-0.277
+2024-01-05,AAPL,Management commentary on demand trends,0.076
+2024-01-05,AAPL,Management commentary on demand trends,0.447
+2024-01-08,AAPL,Supply chain update raises mixed expectations,-0.322
+2024-01-08,AAPL,Analyst note discusses margin outlook,-0.177
+2024-01-09,AAPL,Macro news influences large-cap tech sentiment,0.026
+2024-01-10,AAPL,Supply chain update raises mixed expectations,0.077
+2024-01-10,AAPL,Macro news influences large-cap tech sentiment,-0.485
+2024-01-11,AAPL,Analyst note discusses margin outlook,0.257
+2024-01-11,AAPL,Product launch rumors circulate online,0.187
+2024-01-12,AAPL,Supply chain update raises mixed expectations,-0.252
+2024-01-12,AAPL,Management commentary on demand trends,0.376
+2024-01-15,AAPL,Supply chain update raises mixed expectations,-0.215
+2024-01-15,AAPL,Management commentary on demand trends,0.527
+2024-01-16,AAPL,Management commentary on demand trends,0.118
+2024-01-16,AAPL,Management commentary on demand trends,0.605
+2024-01-17,AAPL,Supply chain update raises mixed expectations,0.560
+2024-01-18,AAPL,Product launch rumors circulate online,-0.113
+2024-01-19,AAPL,Macro news influences large-cap tech sentiment,-0.027
+2024-01-19,AAPL,Supply chain update raises mixed expectations,0.511
+2024-01-19,AAPL,Supply chain update raises mixed expectations,0.017
+2024-01-22,AAPL,Management commentary on demand trends,0.208
+2024-01-23,AAPL,Management commentary on demand trends,0.075
+2024-01-24,AAPL,Product launch rumors circulate online,0.103
+2024-01-24,AAPL,Management commentary on demand trends,0.162
+2024-01-24,AAPL,Management commentary on demand trends,0.083
+2024-01-25,AAPL,Product launch rumors circulate online,-0.329
+2024-01-25,AAPL,Analyst note discusses margin outlook,-0.396
+2024-01-25,AAPL,Analyst note discusses margin outlook,-0.302
+2024-01-26,AAPL,Management commentary on demand trends,-0.127
+2024-01-26,AAPL,Product launch rumors circulate online,0.311
+2024-01-29,AAPL,Analyst note discusses margin outlook,-0.007
+2024-01-29,AAPL,Analyst note discusses margin outlook,-0.061
+2024-01-30,AAPL,Analyst note discusses margin outlook,0.130
+2024-01-30,AAPL,Product launch rumors circulate online,0.316
+2024-01-30,AAPL,Management commentary on demand trends,0.413
+2024-01-31,AAPL,Product launch rumors circulate online,0.488
+2024-02-01,AAPL,Supply chain update raises mixed expectations,0.453
+2024-02-01,AAPL,Supply chain update raises mixed expectations,0.115
+2024-02-01,AAPL,Macro news influences large-cap tech sentiment,0.471
+2024-02-02,AAPL,Management commentary on demand trends,0.728
+2024-02-02,AAPL,Management commentary on demand trends,-0.768
+2024-02-05,AAPL,Supply chain update raises mixed expectations,0.876
+2024-02-05,AAPL,Analyst note discusses margin outlook,0.378
+2024-02-05,AAPL,Product launch rumors circulate online,-0.143
+2024-02-06,AAPL,Product launch rumors circulate online,-0.145
+2024-02-07,AAPL,Product launch rumors circulate online,-0.143
+2024-02-08,AAPL,Macro news influences large-cap tech sentiment,-0.016
+2024-02-08,AAPL,Supply chain update raises mixed expectations,-0.039
+2024-02-09,AAPL,Management commentary on demand trends,0.067
+2024-02-09,AAPL,Macro news influences large-cap tech sentiment,0.280
+2024-02-12,AAPL,Supply chain update raises mixed expectations,0.160
+2024-02-12,AAPL,Product launch rumors circulate online,-0.341
+2024-02-13,AAPL,Product launch rumors circulate online,0.249
+2024-02-13,AAPL,Management commentary on demand trends,0.112
+2024-02-13,AAPL,Product launch rumors circulate online,-0.069
+2024-02-14,AAPL,Supply chain update raises mixed expectations,0.047
+2024-02-14,AAPL,Management commentary on demand trends,-0.404
+2024-02-15,AAPL,Analyst note discusses margin outlook,-0.242
+2024-02-15,AAPL,Macro news influences large-cap tech sentiment,0.108
+2024-02-16,AAPL,Supply chain update raises mixed expectations,-0.314
+2024-02-16,AAPL,Supply chain update raises mixed expectations,-0.043
+2024-02-19,AAPL,Macro news influences large-cap tech sentiment,0.004
+2024-02-20,AAPL,Analyst note discusses margin outlook,-0.424
+2024-02-21,AAPL,Supply chain update raises mixed expectations,-0.011
+2024-02-22,AAPL,Management commentary on demand trends,0.013
+2024-02-22,AAPL,Supply chain update raises mixed expectations,0.619
+2024-02-22,AAPL,Macro news influences large-cap tech sentiment,0.197
+2024-02-23,AAPL,Macro news influences large-cap tech sentiment,0.241
+2024-02-23,AAPL,Supply chain update raises mixed expectations,-0.061
+2024-02-23,AAPL,Macro news influences large-cap tech sentiment,-0.220
+2024-02-26,AAPL,Macro news influences large-cap tech sentiment,-0.255
+2024-02-27,AAPL,Macro news influences large-cap tech sentiment,-0.211
+2024-02-27,AAPL,Product launch rumors circulate online,0.501
+2024-02-28,AAPL,Macro news influences large-cap tech sentiment,-0.050
+2024-02-28,AAPL,Macro news influences large-cap tech sentiment,-0.221
+2024-02-29,AAPL,Analyst note discusses margin outlook,-0.242
+2024-02-29,AAPL,Management commentary on demand trends,0.135
+2024-02-29,AAPL,Analyst note discusses margin outlook,0.400
+2024-03-01,AAPL,Analyst note discusses margin outlook,-0.016
+2024-03-01,AAPL,Supply chain update raises mixed expectations,-0.064
+2024-03-01,AAPL,Supply chain update raises mixed expectations,0.078
+2024-03-04,AAPL,Supply chain update raises mixed expectations,0.070
+2024-03-04,AAPL,Analyst note discusses margin outlook,-0.440
+2024-03-05,AAPL,Management commentary on demand trends,-0.714
+2024-03-06,AAPL,Macro news influences large-cap tech sentiment,-0.194
+2024-03-06,AAPL,Analyst note discusses margin outlook,0.535
+2024-03-07,AAPL,Product launch rumors circulate online,0.139
+2024-03-08,AAPL,Supply chain update raises mixed expectations,0.407
+2024-03-08,AAPL,Product launch rumors circulate online,0.081
+2024-03-11,AAPL,Macro news influences large-cap tech sentiment,0.528
+2024-03-12,AAPL,Macro news influences large-cap tech sentiment,-0.115
+2024-03-13,AAPL,Management commentary on demand trends,-0.229
+2024-03-13,AAPL,Macro news influences large-cap tech sentiment,0.034
+2024-03-13,AAPL,Macro news influences large-cap tech sentiment,0.067
+2024-03-14,AAPL,Product launch rumors circulate online,0.493
+2024-03-14,AAPL,Supply chain update raises mixed expectations,-0.669
+2024-03-15,AAPL,Management commentary on demand trends,0.013
+2024-03-18,AAPL,Management commentary on demand trends,0.432
+2024-03-18,AAPL,Analyst note discusses margin outlook,-0.117
+2024-03-19,AAPL,Management commentary on demand trends,0.291
+2024-03-19,AAPL,Macro news influences large-cap tech sentiment,-0.343
+2024-03-20,AAPL,Macro news influences large-cap tech sentiment,-0.263
+2024-03-21,AAPL,Supply chain update raises mixed expectations,-0.027
+2024-03-21,AAPL,Macro news influences large-cap tech sentiment,-0.246
+2024-03-21,AAPL,Product launch rumors circulate online,0.135
+2024-03-22,AAPL,Product launch rumors circulate online,-0.180
+2024-03-22,AAPL,Macro news influences large-cap tech sentiment,-0.061
+2024-03-22,AAPL,Analyst note discusses margin outlook,-0.115
+2024-03-25,AAPL,Macro news influences large-cap tech sentiment,0.410
+2024-03-25,AAPL,Product launch rumors circulate online,-0.046
+2024-03-26,AAPL,Supply chain update raises mixed expectations,0.053
+2024-03-26,AAPL,Management commentary on demand trends,0.537
+2024-03-26,AAPL,Macro news influences large-cap tech sentiment,-0.470
+2024-03-27,AAPL,Supply chain update raises mixed expectations,0.102
+2024-03-28,AAPL,Macro news influences large-cap tech sentiment,0.017
+2024-03-29,AAPL,Product launch rumors circulate online,0.594
+2024-03-29,AAPL,Management commentary on demand trends,0.327
+2024-03-29,AAPL,Management commentary on demand trends,-0.202
+2024-04-01,AAPL,Management commentary on demand trends,-0.196
+2024-04-02,AAPL,Supply chain update raises mixed expectations,-0.173
+2024-04-02,AAPL,Macro news influences large-cap tech sentiment,0.259
+2024-04-02,AAPL,Supply chain update raises mixed expectations,0.178
+2024-04-03,AAPL,Management commentary on demand trends,0.079
+2024-04-03,AAPL,Product launch rumors circulate online,0.042
+2024-04-03,AAPL,Analyst note discusses margin outlook,-0.323
+2024-04-04,AAPL,Analyst note discusses margin outlook,-0.455
+2024-04-04,AAPL,Analyst note discusses margin outlook,0.237
+2024-04-04,AAPL,Analyst note discusses margin outlook,-0.004
+2024-04-05,AAPL,Management commentary on demand trends,0.156
+2024-04-05,AAPL,Macro news influences large-cap tech sentiment,0.313
+2024-04-08,AAPL,Product launch rumors circulate online,0.391
+2024-04-08,AAPL,Product launch rumors circulate online,0.268
+2024-04-08,AAPL,Macro news influences large-cap tech sentiment,0.478
+2024-04-09,AAPL,Product launch rumors circulate online,-0.413
+2024-04-09,AAPL,Product launch rumors circulate online,0.057
+2024-04-09,AAPL,Macro news influences large-cap tech sentiment,-0.201
+2024-04-10,AAPL,Analyst note discusses margin outlook,-0.246
+2024-04-10,AAPL,Macro news influences large-cap tech sentiment,0.478
+2024-04-10,AAPL,Product launch rumors circulate online,-0.256
+2024-04-11,AAPL,Macro news influences large-cap tech sentiment,1.027
+2024-04-12,AAPL,Macro news influences large-cap tech sentiment,-0.300
+2024-04-12,AAPL,Management commentary on demand trends,-0.236
+2024-04-15,AAPL,Macro news influences large-cap tech sentiment,0.130
+2024-04-15,AAPL,Analyst note discusses margin outlook,0.087
+2024-04-16,AAPL,Management commentary on demand trends,0.504
+2024-04-16,AAPL,Management commentary on demand trends,0.703
+2024-04-16,AAPL,Macro news influences large-cap tech sentiment,0.141
+2024-04-17,AAPL,Analyst note discusses margin outlook,-0.438
+2024-04-17,AAPL,Analyst note discusses margin outlook,-0.164
+2024-04-18,AAPL,Macro news influences large-cap tech sentiment,0.426
+2024-04-18,AAPL,Product launch rumors circulate online,-0.606
+2024-04-18,AAPL,Supply chain update raises mixed expectations,0.129
+2024-04-19,AAPL,Supply chain update raises mixed expectations,-0.183
+2024-04-22,AAPL,Product launch rumors circulate online,-0.474
+2024-04-22,AAPL,Analyst note discusses margin outlook,-0.496
+2024-04-23,AAPL,Macro news influences large-cap tech sentiment,0.376
+2024-04-23,AAPL,Product launch rumors circulate online,0.119
+2024-04-24,AAPL,Management commentary on demand trends,-0.118
+2024-04-25,AAPL,Product launch rumors circulate online,0.371
+2024-04-26,AAPL,Management commentary on demand trends,-0.710
+2024-04-26,AAPL,Product launch rumors circulate online,-0.099
+2024-04-26,AAPL,Management commentary on demand trends,0.771
+2024-04-29,AAPL,Management commentary on demand trends,-0.382
+2024-04-29,AAPL,Analyst note discusses margin outlook,-0.086
+2024-04-30,AAPL,Macro news influences large-cap tech sentiment,0.077
+2024-05-01,AAPL,Management commentary on demand trends,0.346
+2024-05-01,AAPL,Management commentary on demand trends,0.238
+2024-05-01,AAPL,Supply chain update raises mixed expectations,0.289
+2024-05-02,AAPL,Management commentary on demand trends,0.285
+2024-05-02,AAPL,Supply chain update raises mixed expectations,-0.316
+2024-05-02,AAPL,Management commentary on demand trends,0.389
+2024-05-03,AAPL,Product launch rumors circulate online,-0.429
+2024-05-06,AAPL,Management commentary on demand trends,0.137
+2024-05-06,AAPL,Supply chain update raises mixed expectations,0.073
+2024-05-06,AAPL,Macro news influences large-cap tech sentiment,0.174
+2024-05-07,AAPL,Management commentary on demand trends,-0.053
+2024-05-07,AAPL,Analyst note discusses margin outlook,-0.091
+2024-05-07,AAPL,Analyst note discusses margin outlook,-0.087
+2024-05-08,AAPL,Product launch rumors circulate online,0.434
+2024-05-09,AAPL,Product launch rumors circulate online,-0.208
+2024-05-09,AAPL,Supply chain update raises mixed expectations,0.267
+2024-05-09,AAPL,Macro news influences large-cap tech sentiment,-0.431
+2024-05-10,AAPL,Analyst note discusses margin outlook,-0.244
+2024-05-10,AAPL,Macro news influences large-cap tech sentiment,-0.569
+2024-05-13,AAPL,Analyst note discusses margin outlook,-0.500
+2024-05-13,AAPL,Management commentary on demand trends,0.128
+2024-05-14,AAPL,Management commentary on demand trends,0.422
+2024-05-15,AAPL,Management commentary on demand trends,-0.879
+2024-05-16,AAPL,Analyst note discusses margin outlook,-0.216
+2024-05-16,AAPL,Macro news influences large-cap tech sentiment,-0.099
+2024-05-17,AAPL,Analyst note discusses margin outlook,0.957
+2024-05-17,AAPL,Product launch rumors circulate online,-0.247
+2024-05-20,AAPL,Analyst note discusses margin outlook,-0.317
+2024-05-21,AAPL,Product launch rumors circulate online,0.664
+2024-05-21,AAPL,Product launch rumors circulate online,0.007
+2024-05-22,AAPL,Supply chain update raises mixed expectations,0.115
+2024-05-23,AAPL,Management commentary on demand trends,0.285
+2024-05-24,AAPL,Supply chain update raises mixed expectations,0.742
+2024-05-27,AAPL,Product launch rumors circulate online,0.062
+2024-05-28,AAPL,Management commentary on demand trends,0.101
+2024-05-28,AAPL,Analyst note discusses margin outlook,-0.111
+2024-05-28,AAPL,Product launch rumors circulate online,0.666
+2024-05-29,AAPL,Supply chain update raises mixed expectations,0.108
+2024-05-30,AAPL,Analyst note discusses margin outlook,0.103
+2024-05-30,AAPL,Macro news influences large-cap tech sentiment,0.152
+2024-05-31,AAPL,Analyst note discusses margin outlook,0.039
+2024-05-31,AAPL,Management commentary on demand trends,-0.348
+2024-05-31,AAPL,Supply chain update raises mixed expectations,-0.269
+2024-06-03,AAPL,Supply chain update raises mixed expectations,-0.163
+2024-06-04,AAPL,Supply chain update raises mixed expectations,-0.110
+2024-06-05,AAPL,Analyst note discusses margin outlook,0.526
+2024-06-06,AAPL,Macro news influences large-cap tech sentiment,-0.100
+2024-06-06,AAPL,Macro news influences large-cap tech sentiment,0.125
+2024-06-07,AAPL,Analyst note discusses margin outlook,-0.037
+2024-06-10,AAPL,Management commentary on demand trends,0.228
+2024-06-11,AAPL,Supply chain update raises mixed expectations,-0.246
+2024-06-11,AAPL,Supply chain update raises mixed expectations,-0.043
+2024-06-11,AAPL,Supply chain update raises mixed expectations,-0.066
+2024-06-12,AAPL,Analyst note discusses margin outlook,0.449
+2024-06-12,AAPL,Analyst note discusses margin outlook,0.356
+2024-06-13,AAPL,Product launch rumors circulate online,-0.356
+2024-06-13,AAPL,Macro news influences large-cap tech sentiment,-0.191
+2024-06-13,AAPL,Management commentary on demand trends,0.126
+2024-06-14,AAPL,Macro news influences large-cap tech sentiment,-0.085
+2024-06-14,AAPL,Macro news influences large-cap tech sentiment,0.129

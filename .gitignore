@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.venv/
+venv/
+
+# Data artifacts
+*.parquet
+*.feather
+*.pkl
+*.pt
+*.pth
+checkpoints/
+outputs/
+
+# Notebook and OS
+.ipynb_checkpoints/
+.DS_Store
+
+# Env
+.env

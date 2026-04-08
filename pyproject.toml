@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "causal-lstm-stock-movement"
+version = "0.1.0"
+description = "Starter scaffold for multimodal stock movement prediction using LSTM + sentiment + causal signals"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
