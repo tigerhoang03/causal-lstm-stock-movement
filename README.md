@@ -179,3 +179,19 @@ git push -u origin main
 ## Important Note
 
 This scaffold intentionally favors clarity over complexity so you can iterate confidently. Once the data and evaluation flow are stable, we can increase model sophistication (FinBERT embeddings, richer fusion blocks, causal regularization, and stronger backtests).
+
+## Reliability Checks
+
+Run this before pushing changes:
+
+```bash
+PYTHONPATH=src pytest -q
+bash scripts/smoke_test.sh
+```
+
+Recreate the recommended Conda environment:
+
+```bash
+conda env create -f environment.yml
+conda activate DS340
+```

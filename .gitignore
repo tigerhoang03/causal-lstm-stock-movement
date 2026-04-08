@@ -21,3 +21,14 @@ outputs/
 
 # Env
 .env
+
+# Local tooling
+.Rhistory
+
+# Generated pipeline data
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+.pytest_cache/
