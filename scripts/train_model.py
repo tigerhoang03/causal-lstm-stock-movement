@@ -7,6 +7,7 @@ import torch
 
 from causal_lstm_stock.config import load_config
 from causal_lstm_stock.data.dataset_builder import build_sequences
+from causal_lstm_stock.features.modalities import select_feature_columns
 from causal_lstm_stock.models.baseline_lstm import BaselineLSTM
 from causal_lstm_stock.models.causal_fusion_lstm import CausalFusionLSTM
 from causal_lstm_stock.train import train_model
@@ -30,8 +31,15 @@ def main() -> None:
 
     fused_df = pd.read_csv(fused_path)
     fused_df["date"] = pd.to_datetime(fused_df["date"])
+    feature_cols = select_feature_columns(fused_df, modalities=cfg.data.modalities)
+    if not feature_cols:
+        raise ValueError("No feature columns selected. Check data.modalities in configs/data.yaml.")
 
-    ds = build_sequences(fused_df, lookback_window=cfg.data.lookback_window)
+    ds = build_sequences(
+        fused_df,
+        lookback_window=cfg.data.lookback_window,
+        feature_columns=feature_cols,
+    )
     if ds.X.size == 0:
         raise ValueError("No sequences built. Check your data coverage and lookback window.")
 
@@ -64,6 +72,7 @@ def main() -> None:
     print(f"Checkpoint saved to: {ckpt_path}")
     print(f"Final train loss: {result.train_loss_history[-1]:.4f}")
     print(f"Final val loss: {result.val_loss_history[-1]:.4f}")
+    print(f"Feature columns used ({len(feature_cols)}): {feature_cols}")
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ from causal_lstm_stock.data.news_loader import load_news
 from causal_lstm_stock.data.price_loader import load_prices
 from causal_lstm_stock.features.causal_features import build_causal_features
 from causal_lstm_stock.features.fusion import fuse_modalities
+from causal_lstm_stock.features.modalities import select_feature_columns
 from causal_lstm_stock.features.news_features import build_news_features
 from causal_lstm_stock.features.price_features import build_price_features
 from causal_lstm_stock.models.baseline_lstm import BaselineLSTM
@@ -31,11 +32,6 @@ def _build_model(arch: str, input_dim: int, hidden_dim: int, num_layers: int, dr
     raise ValueError(f"Unknown architecture: {arch}")
 
 
-def _infer_feature_columns(df: pd.DataFrame) -> list[str]:
-    excluded = {"date", "ticker", "open", "high", "low", "close"}
-    return [c for c in df.columns if c not in excluded and pd.api.types.is_numeric_dtype(df[c])]
-
-
 def _resolve_path(root: Path, default_rel: str, override: str | None) -> Path:
     if override is None:
         return root / default_rel
@@ -49,13 +45,21 @@ def _prepare_fused_from_raw(
     prices_csv: str | None,
     news_csv: str | None,
     causal_csv: str | None,
+    finbert_csv: str | None,
 ) -> pd.DataFrame:
     prices_path = _resolve_path(root, cfg.data.paths["prices_csv"], prices_csv)
     news_path = _resolve_path(root, cfg.data.paths["news_csv"], news_csv)
     causal_path = _resolve_path(root, cfg.data.paths["causal_csv"], causal_csv)
+    finbert_enabled = bool((cfg.data.finbert or {}).get("enabled", False))
+    finbert_default_rel = cfg.data.paths.get("finbert_daily_csv", "data/interim/finbert_daily_features.csv")
+    finbert_path = None
+    if finbert_csv is not None:
+        finbert_path = _resolve_path(root, finbert_default_rel, finbert_csv)
+    elif finbert_enabled:
+        finbert_path = _resolve_path(root, finbert_default_rel, None)
 
     prices = load_prices(prices_path)
-    news = load_news(news_path)
+    news = load_news(news_path, finbert_daily_csv=finbert_path)
     causal = load_causal_signals(causal_path)
 
     price_feat = build_price_features(prices)
@@ -69,6 +73,7 @@ def _build_backtest_arrays(
     fused_df: pd.DataFrame,
     ticker: str,
     lookback_window: int,
+    feature_cols: list[str],
 ) -> tuple[np.ndarray, np.ndarray, pd.DataFrame]:
     df = fused_df.copy()
     df["date"] = pd.to_datetime(df["date"])
@@ -79,7 +84,10 @@ def _build_backtest_arrays(
             f"Not enough rows for walk-forward backtest on {ticker}. Need > {lookback_window + 1}, found {len(g)}."
         )
 
-    feature_cols = _infer_feature_columns(g)
+    missing_cols = [c for c in feature_cols if c not in g.columns]
+    if missing_cols:
+        raise ValueError(f"Requested feature columns missing in backtest dataframe: {missing_cols}")
+
     if not feature_cols:
         raise ValueError("No numeric feature columns found for backtest.")
 
@@ -206,6 +214,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prices-csv", type=str, default=None, help="Optional raw prices CSV override.")
     parser.add_argument("--news-csv", type=str, default=None, help="Optional raw news CSV override.")
     parser.add_argument("--causal-csv", type=str, default=None, help="Optional raw causal CSV override.")
+    parser.add_argument("--finbert-csv", type=str, default=None, help="Optional FinBERT daily CSV override.")
     parser.add_argument(
         "--save-fused",
         action="store_true",
@@ -235,7 +244,14 @@ def main() -> None:
 
     fused_path = root / cfg.data.paths["fused_output_csv"]
     if args.use_raw_data:
-        fused_df = _prepare_fused_from_raw(root, cfg, args.prices_csv, args.news_csv, args.causal_csv)
+        fused_df = _prepare_fused_from_raw(
+            root,
+            cfg,
+            args.prices_csv,
+            args.news_csv,
+            args.causal_csv,
+            args.finbert_csv,
+        )
         if args.save_fused:
             fused_path.parent.mkdir(parents=True, exist_ok=True)
             fused_df.to_csv(fused_path, index=False)
@@ -247,10 +263,12 @@ def main() -> None:
         fused_df = pd.read_csv(fused_path)
 
     ticker = args.ticker or cfg.data.ticker
+    feature_cols = select_feature_columns(fused_df, modalities=cfg.data.modalities)
     X, y, meta_df = _build_backtest_arrays(
         fused_df=fused_df,
         ticker=ticker,
         lookback_window=cfg.data.lookback_window,
+        feature_cols=feature_cols,
     )
 
     pred_df = _run_walk_forward(
@@ -282,6 +300,9 @@ def main() -> None:
         "threshold": float(args.threshold),
         "epochs": int(args.epochs or cfg.train.epochs),
         "data_source": "raw_recomputed" if args.use_raw_data else "fused_csv",
+        "num_features": int(len(feature_cols)),
+        "feature_columns": feature_cols,
+        "modalities": cfg.data.modalities,
     }
 
     output_csv = Path(args.output_csv)

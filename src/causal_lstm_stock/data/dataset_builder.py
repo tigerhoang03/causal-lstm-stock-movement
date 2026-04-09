@@ -17,8 +17,15 @@ def _infer_feature_columns(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if c not in excluded and pd.api.types.is_numeric_dtype(df[c])]
 
 
-def build_sequences(fused_df: pd.DataFrame, lookback_window: int) -> SequenceDataset:
-    feature_cols = _infer_feature_columns(fused_df)
+def build_sequences(
+    fused_df: pd.DataFrame,
+    lookback_window: int,
+    feature_columns: list[str] | None = None,
+) -> SequenceDataset:
+    feature_cols = feature_columns or _infer_feature_columns(fused_df)
+    missing_cols = [c for c in feature_cols if c not in fused_df.columns]
+    if missing_cols:
+        raise ValueError(f"Requested feature columns missing from fused dataframe: {missing_cols}")
     X_list: list[np.ndarray] = []
     y_list: list[int] = []
 

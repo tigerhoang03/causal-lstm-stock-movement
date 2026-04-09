@@ -44,9 +44,13 @@ causal-lstm-stock-movement/
 ├── docs/
 │   └── paper_notes.md
 ├── scripts/
+│   ├── build_finbert_features.py
 │   ├── prepare_data.py
 │   ├── train_model.py
-│   └── evaluate_model.py
+│   ├── evaluate_model.py
+│   ├── run_inference.py
+│   ├── walk_forward_backtest.py
+│   └── live_predict_job.py
 ├── src/causal_lstm_stock/
 │   ├── config.py
 │   ├── evaluate.py
@@ -60,12 +64,16 @@ causal-lstm-stock-movement/
 │   │   ├── price_features.py
 │   │   ├── news_features.py
 │   │   ├── causal_features.py
+│   │   ├── modalities.py
 │   │   └── fusion.py
+│   ├── nlp/
+│   │   └── finbert_inference.py
 │   └── models/
 │       ├── baseline_lstm.py
 │       └── causal_fusion_lstm.py
 ├── tests/
-│   └── test_shapes.py
+│   ├── test_shapes.py
+│   └── test_modalities.py
 ├── .env.example
 ├── .gitignore
 ├── pyproject.toml
@@ -77,16 +85,17 @@ causal-lstm-stock-movement/
 
 - Data loaders for price/news/causal CSVs
 - Basic feature engineering for each modality
+- True FinBERT feature generation script (`build_finbert_features.py`)
 - Fusion pipeline into a single aligned daily table
 - Sequence dataset builder (lookback windows)
 - Baseline LSTM and starter `CausalFusionLSTM`
 - Train/evaluate utilities
+- Modality toggles for ablation (`price`, `news`, `causal`)
 - Runnable script flow (`prepare -> train -> evaluate`)
 - Synthetic sample data to help you test the pipeline immediately
 
 ## What Is Still Placeholder
 
-- Real FinBERT embeddings (currently sentiment score placeholder)
 - Explicit causal graph or SCM-based signal generation
 - Robust backtesting protocol (walk-forward / rolling windows)
 - Hyperparameter search and calibration
@@ -97,25 +106,24 @@ causal-lstm-stock-movement/
 ## 1) Create environment and install dependencies
 
 ```bash
+conda activate DS340
 cd "/Users/andrew/Desktop/causal-lstm-stock-movement"
-python3 -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
-pip install -e .
 ```
 
 ## 2) Run the full starter pipeline
 
 ```bash
-python scripts/prepare_data.py
-python scripts/train_model.py
-python scripts/evaluate_model.py
+PYTHONPATH=src python scripts/build_finbert_features.py
+PYTHONPATH=src python scripts/prepare_data.py
+PYTHONPATH=src python scripts/train_model.py
+PYTHONPATH=src python scripts/evaluate_model.py
 ```
 
 ## 3) Run a basic test
 
 ```bash
-pytest -q
+PYTHONPATH=src pytest -q
 ```
 
 ## Data Format Expectations
@@ -129,6 +137,8 @@ Required columns:
 - `date`, `ticker`, `headline`
 Optional now:
 - `sentiment_score`
+- FinBERT runs from text column (default `headline`) and writes daily features to:
+  - `data/interim/finbert_daily_features.csv`
 
 ### Causal CSV (`data/raw/causal/*.csv`)
 Required columns:
@@ -136,10 +146,52 @@ Required columns:
 Suggested starter columns:
 - `intervention_score`, `confounder_proxy`, `macro_shock_signal`
 
+## Modality Toggles
+
+Use `configs/data.yaml` to enable/disable modalities for ablation testing:
+
+```yaml
+modalities:
+  price: true
+  news: true
+  causal: true
+  include_other_features: true
+```
+
+Common experiments:
+- Price-only: `price=true`, `news=false`, `causal=false`
+- Price+News: `price=true`, `news=true`, `causal=false`
+- Full model: `price=true`, `news=true`, `causal=true`
+
+After changing modality flags or adding/removing FinBERT features, retrain the model before evaluation/inference so checkpoint input dimensions match.
+
+## FinBERT Options
+
+FinBERT behavior is configured in `configs/data.yaml`:
+
+```yaml
+finbert:
+  enabled: false
+  model_name: "ProsusAI/finbert"
+  batch_size: 16
+  max_length: 128
+  text_column: "headline"
+  auto_build_features: false
+```
+
+If `enabled: true`, `prepare_data.py` expects daily FinBERT features at:
+- `data/interim/finbert_daily_features.csv`
+
+or will auto-build them when `auto_build_features: true`.
+
+Important compatibility note:
+- FinBERT loading in this project requires `torch>=2.6` (already pinned in `requirements.txt`).
+- `run_inference.py` and `walk_forward_backtest.py` also accept `--finbert-csv` to explicitly pass a FinBERT daily feature file for raw-data runs.
+
 ## Beginner-Friendly Next Steps
 
 1. Replace synthetic CSVs with your real data source(s).
-2. Add FinBERT pipeline in `news_loader.py` (or a dedicated embedding module).
+2. Turn on/off modalities in `configs/data.yaml` and compare ablations.
 3. Add at least one causal-signal generation notebook and export to `data/raw/causal/`.
 4. Switch from random validation split to walk-forward split.
 5. Track experiments (config + metrics + notes).

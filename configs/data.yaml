@@ -5,8 +5,21 @@ data:
   target_horizon_days: 1
   train_split: 0.7
   val_split: 0.15
+  modalities:
+    price: true
+    news: true
+    causal: true
+    include_other_features: true
+  finbert:
+    enabled: false
+    model_name: "ProsusAI/finbert"
+    batch_size: 16
+    max_length: 128
+    text_column: "headline"
+    auto_build_features: false
   paths:
     prices_csv: "data/raw/prices/sample_prices.csv"
     news_csv: "data/raw/news/sample_news.csv"
     causal_csv: "data/raw/causal/sample_causal_signals.csv"
+    finbert_daily_csv: "data/interim/finbert_daily_features.csv"
     fused_output_csv: "data/processed/fused_dataset.csv"

@@ -19,13 +19,22 @@ import pandas as pd
 import torch
 
 from causal_lstm_stock.config import load_config
+from causal_lstm_stock.data.causal_loader import load_causal_signals
 from causal_lstm_stock.data.dataset_builder import build_sequences
+from causal_lstm_stock.data.news_loader import load_news
+from causal_lstm_stock.data.price_loader import load_prices
 from causal_lstm_stock.features.causal_features import build_causal_features
 from causal_lstm_stock.features.fusion import fuse_modalities
+from causal_lstm_stock.features.modalities import select_feature_columns
 from causal_lstm_stock.features.news_features import build_news_features
 from causal_lstm_stock.features.price_features import build_price_features
 from causal_lstm_stock.models.baseline_lstm import BaselineLSTM
 from causal_lstm_stock.models.causal_fusion_lstm import CausalFusionLSTM
+from causal_lstm_stock.nlp.finbert_inference import (
+    FinBERTConfig,
+    add_finbert_article_scores,
+    aggregate_finbert_daily,
+)
 from causal_lstm_stock.train import train_model
 
 
@@ -152,8 +161,7 @@ def fetch_prices_yahoo_chart(ticker: str, start: date, end: date) -> pd.DataFram
         raise ValueError(f"No Yahoo price rows returned for ticker={ticker}")
 
     df = df[["date", "ticker", "open", "high", "low", "close", "volume"]]
-    df = df.sort_values("date").reset_index(drop=True)
-    return df
+    return df.sort_values("date").reset_index(drop=True)
 
 
 def fetch_prices_stooq_fallback(ticker: str, start: date, end: date) -> pd.DataFrame:
@@ -162,29 +170,17 @@ def fetch_prices_stooq_fallback(ticker: str, start: date, end: date) -> pd.DataF
     df = pd.read_csv(url)
     if df.empty:
         raise ValueError(f"No Stooq rows returned for ticker={ticker}")
-
     if "Date" not in df.columns:
-        # Stooq can return a textual usage-policy response; treat as failure.
         raise ValueError("Stooq returned non-price content for this request")
 
-    rename_map = {
-        "Date": "date",
-        "Open": "open",
-        "High": "high",
-        "Low": "low",
-        "Close": "close",
-        "Volume": "volume",
-    }
-    df = df.rename(columns=rename_map)
+    df = df.rename(columns={"Date": "date", "Open": "open", "High": "high", "Low": "low", "Close": "close", "Volume": "volume"})
     df["date"] = pd.to_datetime(df["date"]).dt.date
     df = df[(df["date"] >= start) & (df["date"] <= end)].copy()
     if df.empty:
         raise ValueError(f"No Stooq price rows in requested range {start}..{end} for ticker={ticker}")
 
     df["ticker"] = ticker.upper()
-    df = df[["date", "ticker", "open", "high", "low", "close", "volume"]]
-    df = df.sort_values("date").reset_index(drop=True)
-    return df
+    return df[["date", "ticker", "open", "high", "low", "close", "volume"]].sort_values("date").reset_index(drop=True)
 
 
 def fetch_prices(ticker: str, start: date, end: date) -> pd.DataFrame:
@@ -221,6 +217,7 @@ def fetch_news_google_rss(ticker: str, lookback_days: int, max_items: int) -> pd
                 "date": pub_day,
                 "ticker": ticker.upper(),
                 "headline": title,
+                # Keep lightweight baseline sentiment as a fallback feature.
                 "sentiment_score": _score_headline_sentiment(title),
             }
         )
@@ -230,8 +227,7 @@ def fetch_news_google_rss(ticker: str, lookback_days: int, max_items: int) -> pd
 
     df = pd.DataFrame(rows)
     df["date"] = pd.to_datetime(df["date"]).dt.date
-    df = df.sort_values(["date", "ticker"]).reset_index(drop=True)
-    return df
+    return df.sort_values(["date", "ticker"]).reset_index(drop=True)
 
 
 def fetch_fred_series(series_id: str, start: date, end: date) -> pd.DataFrame:
@@ -246,8 +242,7 @@ def fetch_fred_series(series_id: str, start: date, end: date) -> pd.DataFrame:
     df = df.rename(columns={"DATE": "date", series_id: series_id.lower()})
     df["date"] = pd.to_datetime(df["date"]).dt.date
     df[series_id.lower()] = pd.to_numeric(df[series_id.lower()], errors="coerce")
-    df = df[(df["date"] >= start) & (df["date"] <= end)].copy()
-    return df
+    return df[(df["date"] >= start) & (df["date"] <= end)].copy()
 
 
 def _zscore(series: pd.Series) -> pd.Series:
@@ -261,19 +256,19 @@ def build_causal_signals(price_dates: pd.Series, ticker: str, start: date, end: 
     vix_ok = fedfunds_ok = dgs10_ok = True
     try:
         vix = fetch_fred_series("VIXCLS", start, end)
-    except Exception as err:  # pragma: no cover - network path
+    except Exception as err:  # pragma: no cover
         print(f"Warning: unable to fetch VIXCLS ({err}). Falling back to zeros.")
         vix_ok = False
         vix = pd.DataFrame(columns=["date", "vixcls"])
     try:
         fedfunds = fetch_fred_series("FEDFUNDS", start, end)
-    except Exception as err:  # pragma: no cover - network path
+    except Exception as err:  # pragma: no cover
         print(f"Warning: unable to fetch FEDFUNDS ({err}). Falling back to zeros.")
         fedfunds_ok = False
         fedfunds = pd.DataFrame(columns=["date", "fedfunds"])
     try:
         dgs10 = fetch_fred_series("DGS10", start, end)
-    except Exception as err:  # pragma: no cover - network path
+    except Exception as err:  # pragma: no cover
         print(f"Warning: unable to fetch DGS10 ({err}). Falling back to zeros.")
         dgs10_ok = False
         dgs10 = pd.DataFrame(columns=["date", "dgs10"])
@@ -285,8 +280,7 @@ def build_causal_signals(price_dates: pd.Series, ticker: str, start: date, end: 
         macro = macro.merge(df, on="date", how="left")
 
     numeric_cols = [c for c in macro.columns if c != "date"]
-    macro[numeric_cols] = macro[numeric_cols].ffill().bfill()
-    macro[numeric_cols] = macro[numeric_cols].fillna(0.0)
+    macro[numeric_cols] = macro[numeric_cols].ffill().bfill().fillna(0.0)
 
     if "vixcls" not in macro.columns:
         macro["vixcls"] = 0.0
@@ -295,20 +289,15 @@ def build_causal_signals(price_dates: pd.Series, ticker: str, start: date, end: 
     if "dgs10" not in macro.columns:
         macro["dgs10"] = 0.0
 
-    macro["intervention_score"] = (
-        _zscore(macro["fedfunds"].diff().fillna(0.0)) if fedfunds_ok else 0.0
-    )
+    macro["intervention_score"] = _zscore(macro["fedfunds"].diff().fillna(0.0)) if fedfunds_ok else 0.0
     macro["confounder_proxy"] = _zscore(macro["dgs10"]) if dgs10_ok else 0.0
     macro["macro_shock_signal"] = (
-        _zscore(macro["vixcls"].pct_change().replace([np.inf, -np.inf], 0.0).fillna(0.0))
-        if vix_ok
-        else 0.0
+        _zscore(macro["vixcls"].pct_change().replace([np.inf, -np.inf], 0.0).fillna(0.0)) if vix_ok else 0.0
     )
 
     out = macro[["date", "intervention_score", "confounder_proxy", "macro_shock_signal"]].copy()
     out["ticker"] = ticker.upper()
-    out = out[["date", "ticker", "intervention_score", "confounder_proxy", "macro_shock_signal"]]
-    return out
+    return out[["date", "ticker", "intervention_score", "confounder_proxy", "macro_shock_signal"]]
 
 
 def parse_args() -> argparse.Namespace:
@@ -319,37 +308,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-news-items", type=int, default=200, help="Max number of RSS items to ingest.")
     parser.add_argument("--as-of-date", type=str, default=None, help="Optional YYYY-MM-DD cutoff for inference.")
     parser.add_argument("--threshold", type=float, default=0.5, help="UP classification threshold.")
-    parser.add_argument(
-        "--retrain-on-live-data",
-        action="store_true",
-        help="Retrain the model checkpoint using freshly fetched live data before inference.",
-    )
-    parser.add_argument(
-        "--train-epochs",
-        type=int,
-        default=None,
-        help="Optional epoch override used only when --retrain-on-live-data is enabled.",
-    )
-
-    parser.add_argument(
-        "--output-json",
-        type=str,
-        default="outputs/live/latest_prediction.json",
-        help="Path for prediction JSON output.",
-    )
-
-    parser.add_argument(
-        "--archive-run",
-        action="store_true",
-        help="Also write a timestamped copy of the prediction under outputs/live/archive/.",
-    )
-
-    parser.add_argument(
-        "--save-fused",
-        action="store_true",
-        help="Persist fused dataset from inference step to config fused_output_csv.",
-    )
-
+    parser.add_argument("--retrain-on-live-data", action="store_true", help="Retrain checkpoint before inference.")
+    parser.add_argument("--train-epochs", type=int, default=None, help="Epoch override for retraining.")
+    parser.add_argument("--output-json", type=str, default="outputs/live/latest_prediction.json", help="Prediction output JSON path.")
+    parser.add_argument("--archive-run", action="store_true", help="Also write timestamped archive prediction JSON.")
+    parser.add_argument("--save-fused", action="store_true", help="Persist fused data during inference.")
     return parser.parse_args()
 
 
@@ -365,12 +328,8 @@ def main() -> None:
 
     prices_df = fetch_prices(ticker=ticker, start=start, end=today)
     try:
-        news_df = fetch_news_google_rss(
-            ticker=ticker,
-            lookback_days=args.news_lookback_days,
-            max_items=args.max_news_items,
-        )
-    except Exception as err:  # pragma: no cover - network path
+        news_df = fetch_news_google_rss(ticker=ticker, lookback_days=args.news_lookback_days, max_items=args.max_news_items)
+    except Exception as err:  # pragma: no cover
         print(f"Warning: unable to fetch news RSS ({err}). Continuing with empty news feed.")
         news_df = pd.DataFrame(columns=["date", "ticker", "headline", "sentiment_score"])
     causal_df = build_causal_signals(price_dates=prices_df["date"], ticker=ticker, start=start, end=today)
@@ -378,7 +337,6 @@ def main() -> None:
     prices_path = root / "data" / "raw" / "prices" / f"live_{ticker.lower()}_prices.csv"
     news_path = root / "data" / "raw" / "news" / f"live_{ticker.lower()}_news.csv"
     causal_path = root / "data" / "raw" / "causal" / f"live_{ticker.lower()}_causal.csv"
-
     prices_path.parent.mkdir(parents=True, exist_ok=True)
     news_path.parent.mkdir(parents=True, exist_ok=True)
     causal_path.parent.mkdir(parents=True, exist_ok=True)
@@ -387,18 +345,61 @@ def main() -> None:
     news_df.to_csv(news_path, index=False)
     causal_df.to_csv(causal_path, index=False)
 
+    finbert_enabled = bool((cfg.data.finbert or {}).get("enabled", False))
+    finbert_daily_path: Path | None = None
+    if finbert_enabled:
+        try:
+            fin_cfg = cfg.data.finbert or {}
+            finbert_daily_path = root / "data" / "interim" / f"live_{ticker.lower()}_finbert_daily.csv"
+            finbert_daily_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if news_df.empty:
+                empty_daily = pd.DataFrame(
+                    columns=[
+                        "date",
+                        "ticker",
+                        "finbert_article_count",
+                        "finbert_pos_mean",
+                        "finbert_neu_mean",
+                        "finbert_neg_mean",
+                        "finbert_sentiment_mean",
+                        "finbert_confidence_mean",
+                    ]
+                )
+                empty_daily.to_csv(finbert_daily_path, index=False)
+            else:
+                article_scored = add_finbert_article_scores(
+                    news_df=news_df,
+                    cfg=FinBERTConfig(
+                        model_name=fin_cfg.get("model_name", "ProsusAI/finbert"),
+                        batch_size=int(fin_cfg.get("batch_size", 16)),
+                        max_length=int(fin_cfg.get("max_length", 128)),
+                        text_column=fin_cfg.get("text_column", "headline"),
+                    ),
+                )
+                finbert_daily = aggregate_finbert_daily(article_scored)
+                finbert_daily.to_csv(finbert_daily_path, index=False)
+                print(f"Built live FinBERT daily features: {finbert_daily_path}")
+        except Exception as err:  # pragma: no cover - model/network path
+            print(f"Warning: FinBERT feature generation failed ({err}). Continuing without FinBERT features.")
+            finbert_enabled = False
+            finbert_daily_path = None
+
     if args.retrain_on_live_data:
         print("Retraining checkpoint on freshly fetched live data...")
-        price_feat = build_price_features(prices_df.assign(date=pd.to_datetime(prices_df["date"])))
-        news_feat = build_news_features(news_df.assign(date=pd.to_datetime(news_df["date"])))
-        causal_feat = build_causal_features(causal_df.assign(date=pd.to_datetime(causal_df["date"])))
+        prices = load_prices(prices_path)
+        news = load_news(news_path, finbert_daily_csv=finbert_daily_path if finbert_enabled else None)
+        causal = load_causal_signals(causal_path)
+
+        price_feat = build_price_features(prices)
+        news_feat = build_news_features(news)
+        causal_feat = build_causal_features(causal)
         fused = fuse_modalities(price_feat, news_feat, causal_feat)
 
-        ds = build_sequences(fused, lookback_window=cfg.data.lookback_window)
+        feature_cols = select_feature_columns(fused, modalities=cfg.data.modalities)
+        ds = build_sequences(fused, lookback_window=cfg.data.lookback_window, feature_columns=feature_cols)
         if ds.X.size == 0:
-            raise ValueError(
-                "No sequences produced from fetched live data. Increase --history-days or lower lookback window."
-            )
+            raise ValueError("No sequences produced from fetched live data. Increase --history-days or lower lookback window.")
 
         model = _build_model(
             arch=cfg.model.architecture,
@@ -449,6 +450,8 @@ def main() -> None:
         "--output-json",
         str(output_json),
     ]
+    if finbert_enabled and finbert_daily_path is not None:
+        cmd.extend(["--finbert-csv", str(finbert_daily_path)])
 
     if args.as_of_date:
         cmd.extend(["--as-of-date", args.as_of_date])
@@ -476,6 +479,7 @@ def main() -> None:
                 "prices_csv": str(prices_path),
                 "news_csv": str(news_path),
                 "causal_csv": str(causal_path),
+                "finbert_daily_csv": str(finbert_daily_path) if finbert_daily_path else None,
             },
             "job_timestamp": datetime.now().isoformat(),
         }

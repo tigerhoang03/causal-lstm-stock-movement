@@ -8,6 +8,7 @@ import torch
 from causal_lstm_stock.config import load_config
 from causal_lstm_stock.data.dataset_builder import build_sequences
 from causal_lstm_stock.evaluate import evaluate_classifier
+from causal_lstm_stock.features.modalities import select_feature_columns
 from causal_lstm_stock.models.baseline_lstm import BaselineLSTM
 from causal_lstm_stock.models.causal_fusion_lstm import CausalFusionLSTM
 
@@ -32,7 +33,14 @@ def main() -> None:
 
     fused_df = pd.read_csv(fused_path)
     fused_df["date"] = pd.to_datetime(fused_df["date"])
-    ds = build_sequences(fused_df, lookback_window=cfg.data.lookback_window)
+    feature_cols = select_feature_columns(fused_df, modalities=cfg.data.modalities)
+    if not feature_cols:
+        raise ValueError("No feature columns selected. Check data.modalities in configs/data.yaml.")
+    ds = build_sequences(
+        fused_df,
+        lookback_window=cfg.data.lookback_window,
+        feature_columns=feature_cols,
+    )
 
     model_input_dim = ds.X.shape[-1]
     model = _build_model(
@@ -43,12 +51,23 @@ def main() -> None:
         dropout=cfg.model.dropout,
         num_classes=cfg.model.num_classes,
     )
-    model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
+    try:
+        try:
+            state = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+        except TypeError:
+            state = torch.load(ckpt_path, map_location="cpu")
+        model.load_state_dict(state)
+    except RuntimeError as err:
+        raise RuntimeError(
+            "Checkpoint is incompatible with the current feature set. "
+            "If you changed modality toggles or FinBERT settings, retrain first with scripts/train_model.py."
+        ) from err
 
     metrics = evaluate_classifier(model, ds.X, ds.y)
     print("Evaluation metrics:")
     for k, v in metrics.items():
         print(f"  {k}: {v:.4f}")
+    print(f"Feature columns used ({len(feature_cols)}): {feature_cols}")
 
 
 if __name__ == "__main__":

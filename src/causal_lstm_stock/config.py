@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +16,8 @@ class DataConfig:
     train_split: float
     val_split: float
     paths: dict[str, str]
+    modalities: dict[str, Any] = field(default_factory=dict)
+    finbert: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
