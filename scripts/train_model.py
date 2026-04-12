@@ -8,17 +8,8 @@ import torch
 from causal_lstm_stock.config import load_config
 from causal_lstm_stock.data.dataset_builder import build_sequences
 from causal_lstm_stock.features.modalities import select_feature_columns
-from causal_lstm_stock.models.baseline_lstm import BaselineLSTM
-from causal_lstm_stock.models.causal_fusion_lstm import CausalFusionLSTM
+from causal_lstm_stock.models.factory import build_model
 from causal_lstm_stock.train import train_model
-
-
-def _build_model(arch: str, input_dim: int, hidden_dim: int, num_layers: int, dropout: float, num_classes: int):
-    if arch == "baseline_lstm":
-        return BaselineLSTM(input_dim, hidden_dim, num_layers, dropout, num_classes)
-    if arch == "causal_fusion_lstm":
-        return CausalFusionLSTM(input_dim, hidden_dim, num_layers, dropout, num_classes)
-    raise ValueError(f"Unknown architecture: {arch}")
 
 
 def main() -> None:
@@ -44,13 +35,15 @@ def main() -> None:
         raise ValueError("No sequences built. Check your data coverage and lookback window.")
 
     model_input_dim = ds.X.shape[-1]
-    model = _build_model(
-        arch=cfg.model.architecture,
+    model = build_model(
+        architecture=cfg.model.architecture,
         input_dim=model_input_dim,
         hidden_dim=cfg.model.hidden_dim,
         num_layers=cfg.model.num_layers,
         dropout=cfg.model.dropout,
         num_classes=cfg.model.num_classes,
+        feature_cols=feature_cols,
+        fusion_cfg=cfg.model.fusion,
     )
 
     result = train_model(
@@ -67,7 +60,12 @@ def main() -> None:
     ckpt_dir = root / cfg.train.checkpoint_dir
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     ckpt_path = ckpt_dir / "latest_model.pt"
-    torch.save(model.state_dict(), ckpt_path)
+    payload = {
+        "state_dict": model.state_dict(),
+        "feature_columns": feature_cols,
+        "architecture": cfg.model.architecture,
+    }
+    torch.save(payload, ckpt_path)
 
     print(f"Checkpoint saved to: {ckpt_path}")
     print(f"Final train loss: {result.train_loss_history[-1]:.4f}")

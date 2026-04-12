@@ -1,0 +1,58 @@
+{
+  "ticker": "AAPL",
+  "feature_columns": [
+    "volume",
+    "return_1d",
+    "range_pct",
+    "volume_z",
+    "news_count",
+    "sentiment_score",
+    "intervention_score",
+    "confounder_proxy",
+    "macro_shock_signal"
+  ],
+  "epochs": 30,
+  "min_train_samples": 150,
+  "threshold": 0.5,
+  "paper_run": true,
+  "baseline_lstm": {
+    "accuracy": 0.34,
+    "precision": 0.3333333333333333,
+    "recall": 0.8333333333333334,
+    "f1": 0.47619047619047616,
+    "final_cum_strategy_return": -0.13225597051337057,
+    "final_cum_buy_hold_return": -0.11115147785886448,
+    "num_predictions": 50,
+    "model": "baseline_lstm",
+    "probability_diagnostics": {
+      "mean_p_up": 0.5234608620405197,
+      "std_p_up": 0.017697045916781593,
+      "min_p_up": 0.4981495440006256,
+      "max_p_up": 0.5529888868331909,
+      "frac_predict_up": 0.9,
+      "frac_p_up_above_threshold": 0.9
+    }
+  },
+  "causal_fusion_lstm": {
+    "accuracy": 0.34,
+    "precision": 0.3333333333333333,
+    "recall": 0.8333333333333334,
+    "f1": 0.47619047619047616,
+    "final_cum_strategy_return": -0.13225597051337057,
+    "final_cum_buy_hold_return": -0.11115147785886448,
+    "num_predictions": 50,
+    "model": "causal_fusion_lstm",
+    "probability_diagnostics": {
+      "mean_p_up": 0.5244937306642532,
+      "std_p_up": 0.017498261360580195,
+      "min_p_up": 0.497963011264801,
+      "max_p_up": 0.5538616180419922,
+      "frac_predict_up": 0.9,
+      "frac_p_up_above_threshold": 0.9
+    }
+  },
+  "cross_model": {
+    "mean_abs_delta_p_up": 0.0012301361560821532,
+    "corr_p_up": 0.9977345293356568
+  }
+}
