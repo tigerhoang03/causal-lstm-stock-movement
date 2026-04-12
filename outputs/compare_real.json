@@ -1,0 +1,35 @@
+{
+  "ticker": "AAPL",
+  "feature_columns": [
+    "volume",
+    "return_1d",
+    "range_pct",
+    "volume_z",
+    "news_count",
+    "sentiment_score",
+    "intervention_score",
+    "confounder_proxy",
+    "macro_shock_signal"
+  ],
+  "epochs": 3,
+  "baseline_lstm": {
+    "accuracy": 0.5,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.6666666666666666,
+    "final_cum_strategy_return": 0.09664743048572899,
+    "final_cum_buy_hold_return": 0.09664743048572899,
+    "num_predictions": 20,
+    "model": "baseline_lstm"
+  },
+  "causal_fusion_lstm": {
+    "accuracy": 0.5,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.6666666666666666,
+    "final_cum_strategy_return": 0.09664743048572899,
+    "final_cum_buy_hold_return": 0.09664743048572899,
+    "num_predictions": 20,
+    "model": "causal_fusion_lstm"
+  }
+}

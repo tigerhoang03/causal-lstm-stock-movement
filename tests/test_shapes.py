@@ -3,7 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+import torch
+
 from causal_lstm_stock.data.dataset_builder import build_sequences
+from causal_lstm_stock.models.causal_fusion_lstm import CausalFusionLSTM
 
 
 def test_sequence_builder_shapes() -> None:
@@ -29,3 +32,20 @@ def test_sequence_builder_shapes() -> None:
     assert ds.X.ndim == 3
     assert ds.y.ndim == 1
     assert ds.X.shape[0] == ds.y.shape[0]
+
+
+def test_causal_fusion_attention_output_shape() -> None:
+    b, t, f = 4, 10, 8
+    macro_idx, sent_idx = 3, 5
+    x = torch.randn(b, t, f)
+    model = CausalFusionLSTM(
+        input_dim=f,
+        hidden_dim=16,
+        num_layers=1,
+        dropout=0.0,
+        num_classes=2,
+        macro_feature_index=macro_idx,
+        sentiment_feature_index=sent_idx,
+    )
+    logits = model(x)
+    assert logits.shape == (b, 2)

@@ -13,7 +13,9 @@ venv/
 *.pt
 *.pth
 checkpoints/
-outputs/
+outputs/*
+!outputs/.gitkeep
+!outputs/*.json
 
 # Notebook and OS
 .ipynb_checkpoints/

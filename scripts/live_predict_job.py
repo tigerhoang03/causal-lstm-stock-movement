@@ -6,12 +6,10 @@ import os
 import re
 import subprocess
 import sys
-import time
 from datetime import date, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import quote_plus
-from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 import numpy as np
@@ -19,6 +17,8 @@ import pandas as pd
 import torch
 
 from causal_lstm_stock.config import load_config
+from causal_lstm_stock.data.external_prices import fetch_prices, http_get_text
+from causal_lstm_stock.data.fred_series import fetch_fred_series
 from causal_lstm_stock.data.causal_loader import load_causal_signals
 from causal_lstm_stock.data.dataset_builder import build_sequences
 from causal_lstm_stock.data.news_loader import load_news
@@ -28,8 +28,8 @@ from causal_lstm_stock.features.fusion import fuse_modalities
 from causal_lstm_stock.features.modalities import select_feature_columns
 from causal_lstm_stock.features.news_features import build_news_features
 from causal_lstm_stock.features.price_features import build_price_features
-from causal_lstm_stock.models.baseline_lstm import BaselineLSTM
-from causal_lstm_stock.models.causal_fusion_lstm import CausalFusionLSTM
+from causal_lstm_stock.models.factory import build_model
+from causal_lstm_stock.pipeline import integrate_macro_shock_into_causal
 from causal_lstm_stock.nlp.finbert_inference import (
     FinBERTConfig,
     add_finbert_article_scores,
@@ -72,34 +72,6 @@ NEGATIVE_WORDS = {
 }
 
 
-def _build_model(arch: str, input_dim: int, hidden_dim: int, num_layers: int, dropout: float, num_classes: int):
-    if arch == "baseline_lstm":
-        return BaselineLSTM(input_dim, hidden_dim, num_layers, dropout, num_classes)
-    if arch == "causal_fusion_lstm":
-        return CausalFusionLSTM(input_dim, hidden_dim, num_layers, dropout, num_classes)
-    raise ValueError(f"Unknown architecture: {arch}")
-
-
-def _http_get_text(url: str, timeout: int = 30) -> str:
-    last_err: Exception | None = None
-    for attempt in range(1, 4):
-        req = Request(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (compatible; DS340-LivePredict/1.0)",
-                "Accept": "text/plain,text/csv,application/xml,text/xml,*/*",
-            },
-        )
-        try:
-            with urlopen(req, timeout=timeout) as resp:
-                return resp.read().decode("utf-8", errors="replace")
-        except Exception as err:  # pragma: no cover - network path
-            last_err = err
-            if attempt < 3:
-                time.sleep(1.5 * attempt)
-    raise RuntimeError(f"HTTP request failed after retries: {url}") from last_err
-
-
 def _score_headline_sentiment(headline: str) -> float:
     tokens = re.findall(r"[A-Za-z]+", headline.lower())
     if not tokens:
@@ -109,92 +81,10 @@ def _score_headline_sentiment(headline: str) -> float:
     return float((pos - neg) / max(len(tokens), 1))
 
 
-def fetch_prices_yahoo_chart(ticker: str, start: date, end: date) -> pd.DataFrame:
-    start_ts = int(datetime.combine(start, datetime.min.time()).timestamp())
-    end_ts = int(datetime.combine(end + timedelta(days=1), datetime.min.time()).timestamp())
-    url = (
-        f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
-        f"?period1={start_ts}&period2={end_ts}&interval=1d&events=history&includeAdjustedClose=true"
-    )
-
-    payload = json.loads(_http_get_text(url))
-    chart = payload.get("chart", {})
-    err = chart.get("error")
-    if err:
-        raise ValueError(f"Yahoo chart API error for {ticker}: {err}")
-
-    result_list = chart.get("result") or []
-    if not result_list:
-        raise ValueError(f"No Yahoo chart result for ticker={ticker}")
-
-    result = result_list[0]
-    ts = result.get("timestamp") or []
-    quote = ((result.get("indicators") or {}).get("quote") or [{}])[0]
-    opens = quote.get("open") or []
-    highs = quote.get("high") or []
-    lows = quote.get("low") or []
-    closes = quote.get("close") or []
-    volumes = quote.get("volume") or []
-
-    rows: list[dict[str, object]] = []
-    for i, t in enumerate(ts):
-        if i >= len(opens) or i >= len(highs) or i >= len(lows) or i >= len(closes) or i >= len(volumes):
-            continue
-        o, h, l, c, v = opens[i], highs[i], lows[i], closes[i], volumes[i]
-        if any(x is None for x in [o, h, l, c, v]):
-            continue
-        d = datetime.utcfromtimestamp(int(t)).date()
-        rows.append(
-            {
-                "date": d,
-                "ticker": ticker.upper(),
-                "open": float(o),
-                "high": float(h),
-                "low": float(l),
-                "close": float(c),
-                "volume": int(v),
-            }
-        )
-
-    df = pd.DataFrame(rows)
-    if df.empty:
-        raise ValueError(f"No Yahoo price rows returned for ticker={ticker}")
-
-    df = df[["date", "ticker", "open", "high", "low", "close", "volume"]]
-    return df.sort_values("date").reset_index(drop=True)
-
-
-def fetch_prices_stooq_fallback(ticker: str, start: date, end: date) -> pd.DataFrame:
-    symbol = f"{ticker.lower()}.us"
-    url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
-    df = pd.read_csv(url)
-    if df.empty:
-        raise ValueError(f"No Stooq rows returned for ticker={ticker}")
-    if "Date" not in df.columns:
-        raise ValueError("Stooq returned non-price content for this request")
-
-    df = df.rename(columns={"Date": "date", "Open": "open", "High": "high", "Low": "low", "Close": "close", "Volume": "volume"})
-    df["date"] = pd.to_datetime(df["date"]).dt.date
-    df = df[(df["date"] >= start) & (df["date"] <= end)].copy()
-    if df.empty:
-        raise ValueError(f"No Stooq price rows in requested range {start}..{end} for ticker={ticker}")
-
-    df["ticker"] = ticker.upper()
-    return df[["date", "ticker", "open", "high", "low", "close", "volume"]].sort_values("date").reset_index(drop=True)
-
-
-def fetch_prices(ticker: str, start: date, end: date) -> pd.DataFrame:
-    try:
-        return fetch_prices_yahoo_chart(ticker=ticker, start=start, end=end)
-    except Exception as yahoo_err:
-        print(f"Yahoo price fetch failed ({yahoo_err}). Trying Stooq fallback...")
-        return fetch_prices_stooq_fallback(ticker=ticker, start=start, end=end)
-
-
 def fetch_news_google_rss(ticker: str, lookback_days: int, max_items: int) -> pd.DataFrame:
     query = quote_plus(f"{ticker} stock when:{lookback_days}d")
     url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
-    xml_text = _http_get_text(url)
+    xml_text = http_get_text(url)
 
     root = ET.fromstring(xml_text)
     items = root.findall("./channel/item")
@@ -228,21 +118,6 @@ def fetch_news_google_rss(ticker: str, lookback_days: int, max_items: int) -> pd
     df = pd.DataFrame(rows)
     df["date"] = pd.to_datetime(df["date"]).dt.date
     return df.sort_values(["date", "ticker"]).reset_index(drop=True)
-
-
-def fetch_fred_series(series_id: str, start: date, end: date) -> pd.DataFrame:
-    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
-    text = _http_get_text(url)
-    from io import StringIO
-
-    df = pd.read_csv(StringIO(text))
-    if "DATE" not in df.columns or series_id not in df.columns:
-        raise ValueError(f"FRED response missing DATE/{series_id} columns")
-
-    df = df.rename(columns={"DATE": "date", series_id: series_id.lower()})
-    df["date"] = pd.to_datetime(df["date"]).dt.date
-    df[series_id.lower()] = pd.to_numeric(df[series_id.lower()], errors="coerce")
-    return df[(df["date"] >= start) & (df["date"] <= end)].copy()
 
 
 def _zscore(series: pd.Series) -> pd.Series:
@@ -345,6 +220,23 @@ def main() -> None:
     news_df.to_csv(news_path, index=False)
     causal_df.to_csv(causal_path, index=False)
 
+    macro_live_path: Path | None = None
+    gen_cfg = cfg.data.macro_shock_generator or {}
+    if bool(gen_cfg.get("enabled", False)):
+        rng = np.random.default_rng(42)
+        n = len(prices_df)
+        macro_live = pd.DataFrame(
+            {
+                "date": pd.to_datetime(prices_df["date"]),
+                "ticker": ticker,
+                "vix": 13.0 + np.cumsum(rng.normal(0, 0.02, n)),
+                "fed_funds": 5.33 + np.cumsum(rng.normal(0, 0.015, n)),
+            }
+        )
+        macro_live_path = root / "data" / "raw" / "macro" / f"live_{ticker.lower()}_macro.csv"
+        macro_live_path.parent.mkdir(parents=True, exist_ok=True)
+        macro_live.to_csv(macro_live_path, index=False)
+
     finbert_enabled = bool((cfg.data.finbert or {}).get("enabled", False))
     finbert_daily_path: Path | None = None
     if finbert_enabled:
@@ -390,6 +282,13 @@ def main() -> None:
         prices = load_prices(prices_path)
         news = load_news(news_path, finbert_daily_csv=finbert_daily_path if finbert_enabled else None)
         causal = load_causal_signals(causal_path)
+        causal = integrate_macro_shock_into_causal(
+            root,
+            cfg,
+            causal,
+            prices_df=prices,
+            macro_csv_path=macro_live_path,
+        )
 
         price_feat = build_price_features(prices)
         news_feat = build_news_features(news)
@@ -401,13 +300,15 @@ def main() -> None:
         if ds.X.size == 0:
             raise ValueError("No sequences produced from fetched live data. Increase --history-days or lower lookback window.")
 
-        model = _build_model(
-            arch=cfg.model.architecture,
+        model = build_model(
+            architecture=cfg.model.architecture,
             input_dim=ds.X.shape[-1],
             hidden_dim=cfg.model.hidden_dim,
             num_layers=cfg.model.num_layers,
             dropout=cfg.model.dropout,
             num_classes=cfg.model.num_classes,
+            feature_cols=feature_cols,
+            fusion_cfg=cfg.model.fusion,
         )
         result = train_model(
             model=model,
@@ -423,7 +324,14 @@ def main() -> None:
         ckpt_dir = root / cfg.train.checkpoint_dir
         ckpt_dir.mkdir(parents=True, exist_ok=True)
         ckpt_path = ckpt_dir / "latest_model.pt"
-        torch.save(model.state_dict(), ckpt_path)
+        torch.save(
+            {
+                "state_dict": model.state_dict(),
+                "feature_columns": feature_cols,
+                "architecture": cfg.model.architecture,
+            },
+            ckpt_path,
+        )
         print(f"Updated checkpoint: {ckpt_path}")
         print(f"Retrain final train loss: {result.train_loss_history[-1]:.6f}")
         print(f"Retrain final val loss: {result.val_loss_history[-1]:.6f}")
@@ -452,6 +360,8 @@ def main() -> None:
     ]
     if finbert_enabled and finbert_daily_path is not None:
         cmd.extend(["--finbert-csv", str(finbert_daily_path)])
+    if macro_live_path is not None:
+        cmd.extend(["--macro-csv", str(macro_live_path)])
 
     if args.as_of_date:
         cmd.extend(["--as-of-date", args.as_of_date])

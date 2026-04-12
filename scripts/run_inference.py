@@ -18,16 +18,8 @@ from causal_lstm_stock.features.fusion import fuse_modalities
 from causal_lstm_stock.features.modalities import select_feature_columns
 from causal_lstm_stock.features.news_features import build_news_features
 from causal_lstm_stock.features.price_features import build_price_features
-from causal_lstm_stock.models.baseline_lstm import BaselineLSTM
-from causal_lstm_stock.models.causal_fusion_lstm import CausalFusionLSTM
-
-
-def _build_model(arch: str, input_dim: int, hidden_dim: int, num_layers: int, dropout: float, num_classes: int):
-    if arch == "baseline_lstm":
-        return BaselineLSTM(input_dim, hidden_dim, num_layers, dropout, num_classes)
-    if arch == "causal_fusion_lstm":
-        return CausalFusionLSTM(input_dim, hidden_dim, num_layers, dropout, num_classes)
-    raise ValueError(f"Unknown architecture: {arch}")
+from causal_lstm_stock.models.factory import build_model, load_checkpoint_state_dict
+from causal_lstm_stock.pipeline import integrate_macro_shock_into_causal
 
 
 def _resolve_path(root: Path, default_rel: str, override: str | None) -> Path:
@@ -44,6 +36,7 @@ def _prepare_fused_from_raw(
     news_csv: str | None,
     causal_csv: str | None,
     finbert_csv: str | None,
+    macro_csv: str | None,
 ) -> pd.DataFrame:
     prices_path = _resolve_path(root, cfg.data.paths["prices_csv"], prices_csv)
     news_path = _resolve_path(root, cfg.data.paths["news_csv"], news_csv)
@@ -56,28 +49,27 @@ def _prepare_fused_from_raw(
     elif finbert_enabled:
         finbert_path = _resolve_path(root, finbert_default_rel, None)
 
+    macro_path_override: Path | None = None
+    if macro_csv is not None:
+        p = Path(macro_csv)
+        macro_path_override = p if p.is_absolute() else root / p
+
     prices = load_prices(prices_path)
     news = load_news(news_path, finbert_daily_csv=finbert_path)
     causal = load_causal_signals(causal_path)
+    causal = integrate_macro_shock_into_causal(
+        root,
+        cfg,
+        causal,
+        prices_df=prices,
+        macro_csv_path=macro_path_override,
+    )
 
     price_feat = build_price_features(prices)
     news_feat = build_news_features(news)
     causal_feat = build_causal_features(causal)
 
     return fuse_modalities(price_feat, news_feat, causal_feat)
-
-
-def _load_state_dict_compat(path: Path) -> dict[str, torch.Tensor]:
-    try:
-        state = torch.load(path, map_location="cpu", weights_only=True)
-    except TypeError:
-        state = torch.load(path, map_location="cpu")
-
-    if isinstance(state, dict) and "state_dict" in state and isinstance(state["state_dict"], dict):
-        return state["state_dict"]
-    if isinstance(state, dict):
-        return state
-    raise ValueError(f"Unsupported checkpoint format in: {path}")
 
 
 def _build_latest_window(
@@ -128,6 +120,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prices-csv", type=str, default=None, help="Optional raw prices CSV override.")
     parser.add_argument("--news-csv", type=str, default=None, help="Optional raw news CSV override.")
     parser.add_argument("--causal-csv", type=str, default=None, help="Optional raw causal CSV override.")
+    parser.add_argument("--macro-csv", type=str, default=None, help="Optional macro panel CSV override for macro_shock_generator.")
     parser.add_argument("--finbert-csv", type=str, default=None, help="Optional FinBERT daily CSV override.")
     parser.add_argument(
         "--save-fused",
@@ -154,6 +147,7 @@ def main() -> None:
             args.news_csv,
             args.causal_csv,
             args.finbert_csv,
+            args.macro_csv,
         )
         if args.save_fused:
             fused_path.parent.mkdir(parents=True, exist_ok=True)
@@ -179,16 +173,18 @@ def main() -> None:
     if not ckpt_path.exists():
         raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}. Run scripts/train_model.py first.")
 
-    model = _build_model(
-        arch=cfg.model.architecture,
+    model = build_model(
+        architecture=cfg.model.architecture,
         input_dim=X.shape[-1],
         hidden_dim=cfg.model.hidden_dim,
         num_layers=cfg.model.num_layers,
         dropout=cfg.model.dropout,
         num_classes=cfg.model.num_classes,
+        feature_cols=feature_cols,
+        fusion_cfg=cfg.model.fusion,
     )
     try:
-        model.load_state_dict(_load_state_dict_compat(ckpt_path))
+        model.load_state_dict(load_checkpoint_state_dict(ckpt_path))
     except RuntimeError as err:
         raise RuntimeError(
             "Checkpoint is incompatible with the current feature set. "

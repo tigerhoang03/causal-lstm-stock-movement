@@ -18,6 +18,7 @@ class DataConfig:
     paths: dict[str, str]
     modalities: dict[str, Any] = field(default_factory=dict)
     finbert: dict[str, Any] = field(default_factory=dict)
+    macro_shock_generator: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -28,6 +29,7 @@ class ModelConfig:
     num_layers: int
     dropout: float
     num_classes: int
+    fusion: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

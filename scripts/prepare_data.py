@@ -10,6 +10,7 @@ from causal_lstm_stock.data.news_loader import load_news
 from causal_lstm_stock.data.price_loader import load_prices
 from causal_lstm_stock.features.causal_features import build_causal_features
 from causal_lstm_stock.features.fusion import fuse_modalities
+from causal_lstm_stock.pipeline import integrate_macro_shock_into_causal
 from causal_lstm_stock.features.news_features import build_news_features
 from causal_lstm_stock.features.price_features import build_price_features
 from causal_lstm_stock.nlp.finbert_inference import (
@@ -53,6 +54,7 @@ def main() -> None:
     prices = load_prices(prices_path)
     news = load_news(news_path, finbert_daily_csv=finbert_path if finbert_enabled else None)
     causal = load_causal_signals(causal_path)
+    causal = integrate_macro_shock_into_causal(root, cfg, causal, prices_df=prices, macro_csv_path=None)
 
     price_feat = build_price_features(prices)
     news_feat = build_news_features(news)

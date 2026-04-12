@@ -21,5 +21,19 @@ data:
     prices_csv: "data/raw/prices/sample_prices.csv"
     news_csv: "data/raw/news/sample_news.csv"
     causal_csv: "data/raw/causal/sample_causal_signals.csv"
+    macro_csv: "data/raw/macro/sample_macro_panel.csv"
     finbert_daily_csv: "data/interim/finbert_daily_features.csv"
     fused_output_csv: "data/processed/fused_dataset.csv"
+  macro_shock_generator:
+    enabled: true
+    method: dml
+    primary_column: vix
+    control_columns:
+      - fed_funds
+    lag_days: 3
+    ridge_alpha: 1.0
+    mlp:
+      window_days: 5
+      hidden_dim: 32
+      max_iter: 500
+      target: abs_next_return
