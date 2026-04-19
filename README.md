@@ -177,6 +177,82 @@ Paths in [`configs/data.yaml`](configs/data.yaml) (`data.paths`) point at the sa
 PYTHONPATH=src pytest -q
 ```
 
+## End-to-end runbook: complete project, inference, and 3-level scoring
+
+If your goal is a **fully running project** with clear outputs and level-by-level model scoring, use this sequence.
+
+### A) Minimum artifacts required for a complete run
+
+You need all of the following:
+
+1. Environment + dependencies installed (`requirements.txt`).
+2. Raw modality CSVs (price/news/causal), either sample or real.
+3. A fused feature table at `data/processed/fused_dataset.csv`.
+4. A trained checkpoint at `checkpoints/latest_model.pt`.
+
+The scripts map to those artifacts:
+
+- `scripts/prepare_data.py` → builds the fused dataset.
+- `scripts/train_model.py` → trains and writes the checkpoint.
+- `scripts/evaluate_model.py` → prints classification metrics.
+- `scripts/run_inference.py` → outputs single-step next-day prediction + probabilities.
+- `scripts/compare_models.py` → A/B walk-forward baseline vs causal-fusion, plus probability diagnostics.
+
+### B) Full baseline execution (sample data)
+
+```bash
+PYTHONPATH=src python scripts/build_finbert_features.py
+PYTHONPATH=src python scripts/prepare_data.py
+PYTHONPATH=src python scripts/train_model.py
+PYTHONPATH=src python scripts/evaluate_model.py
+```
+
+Then run inference:
+
+```bash
+PYTHONPATH=src python scripts/run_inference.py --output-json outputs/inference_latest.json
+```
+
+### C) Score the three pipeline levels (ablation-style)
+
+Use `configs/data.yaml` modality flags to define each level, then run the same comparison command for each level.
+
+Suggested levels:
+
+1. **Level 1 (price-only):** `price=true, news=false, causal=false`
+2. **Level 2 (price+news):** `price=true, news=true, causal=false`
+3. **Level 3 (full multimodal):** `price=true, news=true, causal=true`
+
+For each level:
+
+```bash
+PYTHONPATH=src python scripts/compare_models.py \
+  --paper-run --max-steps 50 \
+  --output-json outputs/compare_<level_name>.json
+```
+
+This gives per-model accuracy/precision/recall/F1, strategy-vs-buy-hold cumulative return, and probability diagnostics in JSON for easy side-by-side scoring.
+
+### D) Visualizing outputs
+
+1. **Quick table view in terminal**: `compare_models.py` prints metric tables.
+2. **JSON inspection**: open `outputs/compare_*.json` to compare metrics across levels.
+3. **Walk-forward curves**: run:
+
+```bash
+PYTHONPATH=src python scripts/walk_forward_backtest.py \
+  --output-csv outputs/walk_forward_predictions.csv \
+  --summary-json outputs/walk_forward_summary.json
+```
+
+Plot these columns from `walk_forward_predictions.csv`:
+
+- `cum_strategy_return`
+- `cum_buy_hold_return`
+- optional `p_up` and `y_true`/`y_pred` over time
+
+If you use notebooks, load the CSV and plot cumulative return curves for each level in one chart to compare pipeline robustness.
+
 ## Data Format Expectations
 
 ### Price CSV (`data/raw/prices/*.csv`)
